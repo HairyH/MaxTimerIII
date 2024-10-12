@@ -64,7 +64,7 @@
             this.ComboBoxInterval.FormattingEnabled = true;
             this.ComboBoxInterval.Items.AddRange(new object[] {
             "00:30 ",
-            "60:00",
+            "01:00",
             "01:30",
             "02:00",
             "02:30",
@@ -73,6 +73,7 @@
             this.ComboBoxInterval.Name = "ComboBoxInterval";
             this.ComboBoxInterval.Size = new System.Drawing.Size(52, 21);
             this.ComboBoxInterval.TabIndex = 4;
+            this.ComboBoxInterval.SelectedIndexChanged += new System.EventHandler(this.ComboBoxInterval_SelectedIndexChanged);
             // 
             // label1
             // 
@@ -236,7 +237,6 @@
             this.Name = "MainForm";
             this.ShowIcon = false;
             this.Text = "Pt Timer";
-            this.TopMost = true;
             this.Load += new System.EventHandler(this.MainForm_Load);
             this.ResumeLayout(false);
             this.PerformLayout();

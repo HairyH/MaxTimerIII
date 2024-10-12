@@ -17,7 +17,7 @@ namespace MaxTimerIII
     {
 
         // Constants
-        private const int MAXITEMTXT = 256;
+       // private const int MAXITEMTXT = 256;
         private const string PaltalkClassName = "DlgGroupChat Window Class";
         private const string ListViewClassName = "SysHeader32";
         private const int LVM_GETITEMCOUNT = 0x1004;
@@ -79,6 +79,12 @@ namespace MaxTimerIII
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool CloseHandle(IntPtr hObject);
+               
+        [DllImport("user32.dll", EntryPoint = "SetWindowPos")]
+        public static extern IntPtr SetWindowPos(IntPtr hWnd, int hWndInsertAfter, int x, int Y, int cx, int cy, int wFlags);
+        public const int SWP_NOMOVE = 0x0002;
+        public const int SWP_NOSIZE = 0x0001;
+        public const int HWND_TOPMOST = -1;
 
         // Process access rights
         private const uint PROCESS_VM_OPERATION = 0x0008;
@@ -100,7 +106,9 @@ namespace MaxTimerIII
         public int giMicTimerSeconds = 0;  
         private int iDrp = 0;
         private string strClock;
+        private int giInterval = 30;
 
+        // Helper function to convert 
         public byte[] StructureToByteArray(object obj)
         {
             int num = Marshal.SizeOf(RuntimeHelpers.GetObjectValue(obj));
@@ -122,13 +130,13 @@ namespace MaxTimerIII
             return objectValue;
         }
 
+        // Main Form instanciation 
         public MainForm()
         {
             InitializeComponent();
             ghMain = this.Handle;
+            ComboBoxInterval.SelectedIndex = 0;
         }
-
-
       
         private void MainForm_Load(object sender, EventArgs e)
         {
@@ -137,12 +145,19 @@ namespace MaxTimerIII
 
         private void BtnGetPt_Click(object sender, EventArgs e)
         {
-            //MessageBox.Show(sender.ToString());
+            // Gets the handles for the Paltalk Room and Nicks List
             GetPaltalkWindows();
         }
 
+        // Toggles the monitoring of the mic usage 
         private void BtnStart_Click(object sender, EventArgs e)
         {
+            if(ghPtLv == IntPtr.Zero)
+            {
+                MessageBox.Show("No Paltalk Room Handle! \n Get Pt first!", "GetMicUser", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             if( BtnStart.Text == "Start")
             {
                 TimerMonitor.Start();
@@ -189,6 +204,11 @@ namespace MaxTimerIII
                 // Enumerate child windows to find the list view
                 EnumChildWindows(ghPtRoom, EnumPaltalkWindowsCallback, IntPtr.Zero);
 
+                // Set the Paltalk window to topmost 
+                IntPtr iptrRet = SetWindowPos(ghPtRoom, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                Application.DoEvents();
+
+                Debug.WriteLine("Return from SetWindowPos: " + iptrRet);
                 // Update History List Box
                 ListBoxHistory.Items.Add($"Timing: " + sbWindowText);
             }
@@ -204,11 +224,12 @@ namespace MaxTimerIII
             StringBuilder sbClassName = new StringBuilder(256);
             GetClassName(hWnd, sbClassName, sbClassName.Capacity);
             string className = sbClassName.ToString();
-            Debug.WriteLine(className);
+            // Debug.WriteLine(className);
 
             if (className == ListViewClassName)
             {
                 ghPtLv = hWnd;
+
                 Debug.WriteLine($"We got list view handle: {ghPtLv}");
               
                 return false; // Stop enumeration, we got it
@@ -224,8 +245,7 @@ namespace MaxTimerIII
 
             if (ghPtLv == IntPtr.Zero)
             {
-                MessageBox.Show("No Paltalk Room Handle!", "GetMicUser", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return string.Empty; // No Paltalk ListView handle
+               return string.Empty; // No Paltalk ListView handle
             } 
                                
             checked
@@ -321,7 +341,6 @@ namespace MaxTimerIII
             giMicTimerSeconds = 0;
 
             TimerMic.Start();
-
         }
 
         private void MicTimerReset()
@@ -336,11 +355,16 @@ namespace MaxTimerIII
            
             // Get Nick on mic
             gstrCurrentNick = GetMicUser();
+
             if (gstrSavedNick == string.Empty && gstrCurrentNick == string.Empty)
                 return; // No User on mic do nothing
                         
             // Stopped talking or mic dropout 
-            if(gstrCurrentNick == string.Empty && gstrSavedNick != String.Empty )
+            if(gstrCurrentNick == gstrSavedNick)
+            {
+                iDrp = 0;
+            }
+            else if(gstrCurrentNick == string.Empty && gstrSavedNick != String.Empty )
             {
                 iDrp++;
                 // This is to tolerate dropout 
@@ -358,14 +382,20 @@ namespace MaxTimerIII
             else if(gstrCurrentNick != gstrSavedNick)
             {
                 gstrSavedNick = gstrCurrentNick;
-                MicTimerReset();
+               
                 MicTimerStart();
 
-                ListBoxHistory.Items.Add(" Started timing: " + gstrCurrentNick);
+                DateTime dateTime = DateTime.Now;
+                string strTimeStamp = $" {dateTime:HH:mm:ss}";
+                string strOut = $"Started: {gstrCurrentNick} at: {strTimeStamp}";
 
-            }
+                CopyPaste2Paltalk(strOut);
 
-           
+                ListBoxHistory.Items.Add(strOut);     
+
+                Debug.WriteLine("Started: " + gstrCurrentNick + " " + strTimeStamp);
+
+            }                    
 
         }
 
@@ -374,8 +404,8 @@ namespace MaxTimerIII
         {
             int iX = 60;
             int iMin;
-            int iSec;   
-            
+            int iSec;
+                        
             string strMin;
             string strSec;
 
@@ -388,9 +418,70 @@ namespace MaxTimerIII
             if (iMin < 10) strMin = $"0{iMin}";
             else strMin = iMin.ToString();  
             strClock = strMin + ":" + strSec;
-            Debug.WriteLine(strClock);
-                       
+                                  
             TxtClock.Text = strClock;
+
+            //Work out when to write to Paltalk
+            if(giMicTimerSeconds % giInterval == 0)
+            {
+                string strOut = $"{gstrCurrentNick} on Mic for: {strClock}min.";
+                Debug.WriteLine(strOut);
+
+                CopyPaste2Paltalk(strOut);
+
+                ListBoxHistory.Items.Add(strOut);
+            }
+
         }
+
+        private void ComboBoxInterval_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            int iIntervalIndex =  ComboBoxInterval.SelectedIndex;
+            switch (iIntervalIndex)
+            {
+                case 0:
+                    giInterval = 30;
+                    break;
+                case 1:
+                    giInterval = 60;
+                    break;
+                case 2:
+                    giInterval = 90;
+                    break;
+                case 3:
+                    giInterval = 120;
+                    break;
+                case 4:
+                    giInterval = 150;
+                    break;
+                case 5:
+                    giInterval = 180;
+                    break;
+                default:
+                    giInterval = 30;
+                    break;
+            }
+            Debug.WriteLine("Interval changed to: " + giInterval);
+
+        }
+
+        private void CopyPaste2Paltalk(string strMessage)
+        {
+            if (string.IsNullOrEmpty(strMessage)) return;
+            else if (CheckBoxSendTxt.Checked)
+            {
+                Clipboard.SetText("*** " + strMessage + " ***");
+                                   
+                SendKeys.Send("^v{ENTER}");
+                Application.DoEvents();
+            }
+            else
+            {
+                Debug.WriteLine("Send Pt not ticked");
+                //  MessageBox.Show(strMessage);
+            }               
+
+        }
+                
     }
 }
