@@ -8,7 +8,9 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Automation;
 using System.Windows.Forms;
 
 namespace MaxTimerIII
@@ -17,8 +19,9 @@ namespace MaxTimerIII
     {
 
         // Constants
-       // private const int MAXITEMTXT = 256;
-        private const string PaltalkClassName = "DlgGroupChat Window Class";
+        // private const int MAXITEMTXT = 256;
+        private const string PaltalkClassName =  "DlgGroupChat Window Class";
+        private const string PaltalkMainName = "Qt5150QWindowIcon";
         private const string ListViewClassName = "SysHeader32";
         private const int LVM_GETITEMCOUNT = 0x1004;
         private const int LVM_GETITEM = 0x1005;
@@ -85,6 +88,18 @@ namespace MaxTimerIII
         public const int SWP_NOMOVE = 0x0002;
         public const int SWP_NOSIZE = 0x0001;
         public const int HWND_TOPMOST = -1;
+        // Copy paste imports
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr lpdwProcessId);
+
+        [DllImport("kernel32.dll")]
+        private static extern uint GetCurrentThreadId();
 
         // Process access rights
         private const uint PROCESS_VM_OPERATION = 0x0008;
@@ -100,6 +115,7 @@ namespace MaxTimerIII
         private IntPtr ghMain = IntPtr.Zero;
         private IntPtr ghList = IntPtr.Zero;
         private IntPtr ghPtRoom = IntPtr.Zero;
+        private IntPtr ghPtMain = IntPtr.Zero;
         private IntPtr ghPtLv = IntPtr.Zero;
         public string gstrSavedNick = string.Empty;
         public string gstrCurrentNick = string.Empty;
@@ -130,7 +146,7 @@ namespace MaxTimerIII
             return objectValue;
         }
 
-        // Main Form instanciation 
+        // Main Form instantiation 
         public MainForm()
         {
             InitializeComponent();
@@ -154,7 +170,7 @@ namespace MaxTimerIII
         {
             if(ghPtLv == IntPtr.Zero)
             {
-                MessageBox.Show("No Paltalk Room Handle! \n Get Pt first!", "GetMicUser", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("No Paltalk List View Handle! \n Get Pt first!", "GetMicUser", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -193,6 +209,7 @@ namespace MaxTimerIII
 
             // Find the Paltalk chat room window
             ghPtRoom = FindWindow(PaltalkClassName, null);
+            ghPtMain = FindWindow(PaltalkMainName, null);  
 
             if (ghPtRoom != IntPtr.Zero)
             {
@@ -204,11 +221,23 @@ namespace MaxTimerIII
                 // Enumerate child windows to find the list view
                 EnumChildWindows(ghPtRoom, EnumPaltalkWindowsCallback, IntPtr.Zero);
 
-                // Set the Paltalk window to topmost 
-                IntPtr iptrRet = SetWindowPos(ghPtRoom, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                Application.DoEvents();
+                // Get the current thread ID and the target window's thread ID
+                uint targetThreadId = GetWindowThreadProcessId(ghPtRoom, IntPtr.Zero);
+                uint currentThreadId = GetCurrentThreadId();
+                // Attach the input of the current thread to the target window's thread
+                AttachThreadInput(currentThreadId, targetThreadId, true);
+                // Bring the window to the foreground
+                bool bRet = SetForegroundWindow(ghPtMain);
+                Debug.WriteLine($"set foreground returned: {bRet}");
+                // Detach input once done
+               // AttachThreadInput(currentThreadId, targetThreadId, false);
 
-                Debug.WriteLine("Return from SetWindowPos: " + iptrRet);
+                // Give some time for the window to come into focus
+                Thread.Sleep(500);
+
+                // Make the Paltalk Room window the HWND_TOPMOST 
+                SetWindowPos(ghPtMain, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+
                 // Update History List Box
                 ListBoxHistory.Items.Add($"Timing: " + sbWindowText);
             }
@@ -381,20 +410,20 @@ namespace MaxTimerIII
             // New Nick on mic -> start timer
             else if(gstrCurrentNick != gstrSavedNick)
             {
-                gstrSavedNick = gstrCurrentNick;
-               
+                               
                 MicTimerStart();
 
                 DateTime dateTime = DateTime.Now;
                 string strTimeStamp = $" {dateTime:HH:mm:ss}";
                 string strOut = $"Started: {gstrCurrentNick} at: {strTimeStamp}";
 
+                
                 CopyPaste2Paltalk(strOut);
 
                 ListBoxHistory.Items.Add(strOut);     
 
                 Debug.WriteLine("Started: " + gstrCurrentNick + " " + strTimeStamp);
-
+                gstrSavedNick = gstrCurrentNick;
             }                    
 
         }
@@ -470,10 +499,16 @@ namespace MaxTimerIII
             if (string.IsNullOrEmpty(strMessage)) return;
             else if (CheckBoxSendTxt.Checked)
             {
+                
+
+                Clipboard.Clear();
                 Clipboard.SetText("*** " + strMessage + " ***");
-                                   
+
+                bool bRes = SetForegroundWindow(ghPtMain);
+                //Thread.Sleep(500);
+                Debug.WriteLine($"Send to Pt Set Foreground Ret {bRes}");
                 SendKeys.Send("^v{ENTER}");
-                Application.DoEvents();
+                
             }
             else
             {

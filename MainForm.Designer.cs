@@ -126,6 +126,7 @@
             // 
             // BtnGetPt
             // 
+            this.BtnGetPt.AccessibleRole = System.Windows.Forms.AccessibleRole.None;
             this.BtnGetPt.Location = new System.Drawing.Point(10, 346);
             this.BtnGetPt.Name = "BtnGetPt";
             this.BtnGetPt.Size = new System.Drawing.Size(52, 23);
@@ -136,6 +137,7 @@
             // 
             // BtnStart
             // 
+            this.BtnStart.AccessibleRole = System.Windows.Forms.AccessibleRole.None;
             this.BtnStart.Location = new System.Drawing.Point(73, 346);
             this.BtnStart.Name = "BtnStart";
             this.BtnStart.Size = new System.Drawing.Size(52, 23);
@@ -146,6 +148,7 @@
             // 
             // BtnExit
             // 
+            this.BtnExit.AccessibleRole = System.Windows.Forms.AccessibleRole.None;
             this.BtnExit.Location = new System.Drawing.Point(136, 346);
             this.BtnExit.Name = "BtnExit";
             this.BtnExit.Size = new System.Drawing.Size(52, 23);
