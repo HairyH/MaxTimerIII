@@ -23,9 +23,7 @@ namespace MaxTimerIII
         private const string PaltalkClassName =  "DlgGroupChat Window Class";
         private const string PaltalkMainName = "Qt5150QWindowIcon";
         private const string ListViewClassName = "SysHeader32";
-        private const int LVM_GETITEMCOUNT = 0x1004;
-        private const int LVM_GETITEM = 0x1005;
-
+       
         // P/Invoke Structures and Delegates
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         public struct LVITEMW
@@ -379,20 +377,21 @@ namespace MaxTimerIII
             giMicTimerSeconds = 0;
         }
 
+        // This is where the Mic timing logic happens 
         private void TimerMonitor_Tick(object sender, EventArgs e)
         {
            
-            // Get Nick on mic
+            // Get the Nick on mic
             gstrCurrentNick = GetMicUser();
 
             if (gstrSavedNick == string.Empty && gstrCurrentNick == string.Empty)
                 return; // No User on mic do nothing
                         
-            // Stopped talking or mic dropout 
+            // The Nick is the same as before
             if(gstrCurrentNick == gstrSavedNick)
             {
-                iDrp = 0;
-            }
+                iDrp = 0; // Reset dropout counter
+            }       // No Nick on Mic but there was one before
             else if(gstrCurrentNick == string.Empty && gstrSavedNick != String.Empty )
             {
                 iDrp++;
@@ -409,20 +408,21 @@ namespace MaxTimerIII
             }
             // New Nick on mic -> start timer
             else if(gstrCurrentNick != gstrSavedNick)
-            {
-                               
+            {             
                 MicTimerStart();
 
-                DateTime dateTime = DateTime.Now;
-                string strTimeStamp = $" {dateTime:HH:mm:ss}";
-                string strOut = $"Started: {gstrCurrentNick} at: {strTimeStamp}";
-
-                
+                DateTime dateTime = DateTime.UtcNow;
+                string strTimeStamp = $"{dateTime:HH:mm:ss}";
+                string strOut = $"Start: {gstrCurrentNick} at: {strTimeStamp} UTC";
+                                
                 CopyPaste2Paltalk(strOut);
 
-                ListBoxHistory.Items.Add(strOut);     
 
-                Debug.WriteLine("Started: " + gstrCurrentNick + " " + strTimeStamp);
+                string strHistory = $"{gstrCurrentNick} > Start: {strTimeStamp}";
+
+                ListBoxHistory.Items.Add(strHistory);     
+
+                Debug.WriteLine("Start: " + gstrCurrentNick + " " + strTimeStamp);
                 gstrSavedNick = gstrCurrentNick;
             }                    
 
@@ -458,7 +458,7 @@ namespace MaxTimerIII
 
                 CopyPaste2Paltalk(strOut);
 
-                ListBoxHistory.Items.Add(strOut);
+                //ListBoxHistory.Items.Add(strOut);
             }
 
         }

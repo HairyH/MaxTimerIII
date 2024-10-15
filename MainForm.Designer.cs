@@ -53,8 +53,10 @@
             this.ListBoxHistory.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.ListBoxHistory.FormattingEnabled = true;
+            this.ListBoxHistory.HorizontalScrollbar = true;
             this.ListBoxHistory.Location = new System.Drawing.Point(2, 43);
             this.ListBoxHistory.Name = "ListBoxHistory";
+            this.ListBoxHistory.ScrollAlwaysVisible = true;
             this.ListBoxHistory.Size = new System.Drawing.Size(191, 251);
             this.ListBoxHistory.TabIndex = 0;
             this.ListBoxHistory.TabStop = false;
