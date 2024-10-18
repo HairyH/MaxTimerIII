@@ -505,7 +505,7 @@ namespace MaxTimerIII
                 Clipboard.SetText("*** " + strMessage + " ***");
 
                 bool bRes = SetForegroundWindow(ghPtMain);
-                //Thread.Sleep(500);
+                Thread.Sleep(500);
                 Debug.WriteLine($"Send to Pt Set Foreground Ret {bRes}");
                 SendKeys.Send("^v{ENTER}");
                 
