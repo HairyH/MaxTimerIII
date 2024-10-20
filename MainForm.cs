@@ -417,7 +417,6 @@ namespace MaxTimerIII
                                 
                 CopyPaste2Paltalk(strOut);
 
-
                 string strHistory = $"{gstrCurrentNick} > Start: {strTimeStamp}";
 
                 ListBoxHistory.Items.Add(strHistory);     
@@ -499,16 +498,13 @@ namespace MaxTimerIII
             if (string.IsNullOrEmpty(strMessage)) return;
             else if (CheckBoxSendTxt.Checked)
             {
-                
-
                 Clipboard.Clear();
                 Clipboard.SetText("*** " + strMessage + " ***");
 
                 bool bRes = SetForegroundWindow(ghPtMain);
-                Thread.Sleep(500);
+                Thread.Sleep(1000);
                 Debug.WriteLine($"Send to Pt Set Foreground Ret {bRes}");
                 SendKeys.Send("^v{ENTER}");
-                
             }
             else
             {
