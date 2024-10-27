@@ -60,6 +60,11 @@ namespace MaxTimerIII
         [DllImport("user32.dll", SetLastError = true)]
         private static extern IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
 
+        private const int WM_CHAR = 0x0102;
+        private const int WM_KEYDOWN = 0x0100;
+        private const int WM_KEYUP = 0x0101;
+        private const int VK_RETURN = 0x0D;
+
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr OpenProcess(uint dwDesiredAccess, bool bInheritHandle, uint dwProcessId);
 
@@ -414,8 +419,9 @@ namespace MaxTimerIII
                 DateTime dateTime = DateTime.UtcNow;
                 string strTimeStamp = $"{dateTime:HH:mm:ss}";
                 string strOut = $"Start: {gstrCurrentNick} at: {strTimeStamp} UTC";
-                                
-                CopyPaste2Paltalk(strOut);
+
+                // CopyPaste2Paltalk(strOut);
+                SendText2Paltalk(strOut);
 
                 string strHistory = $"{gstrCurrentNick} > Start: {strTimeStamp}";
 
@@ -455,7 +461,8 @@ namespace MaxTimerIII
                 string strOut = $"{gstrCurrentNick} on Mic for: {strClock}min.";
                 Debug.WriteLine(strOut);
 
-                CopyPaste2Paltalk(strOut);
+                //CopyPaste2Paltalk(strOut);
+                SendText2Paltalk(strOut);   
 
                 //ListBoxHistory.Items.Add(strOut);
             }
@@ -498,28 +505,51 @@ namespace MaxTimerIII
         private static extern IntPtr GetForegroundWindow();
 
         // Sending text to Paltalk room
-        private void CopyPaste2Paltalk(string strMessage)
-        {
-            if (string.IsNullOrEmpty(strMessage)) return;
-            else if (CheckBoxSendTxt.Checked)
-            {
-                Clipboard.Clear();
-                Clipboard.SetText("*** " + strMessage + " ***");
+        //private void CopyPaste2Paltalk(string strMessage)
+        //{
+        //    if (string.IsNullOrEmpty(strMessage)) return;
+        //    else if (CheckBoxSendTxt.Checked)
+        //    {
+        //        Clipboard.Clear();
+        //        Clipboard.SetText("*** " + strMessage + " ***");
 
-                bool bRes = SetForegroundWindow(ghPtMain);
-                Thread.Sleep(500); // 0.5 Sec for Pt to get focus
-                Debug.WriteLine($"Send to Pt Set Foreground Ret {bRes}");
+        //        bool bRes = SetForegroundWindow(ghPtMain);
+        //        Thread.Sleep(500); // 0.5 Sec for Pt to get focus
+        //        Debug.WriteLine($"Send to Pt Set Foreground Ret {bRes}");
                
-                SendKeys.SendWait("^v");
-                SendKeys.SendWait("{ENTER}");
+        //        SendKeys.SendWait("^v");
+        //        SendKeys.SendWait("{ENTER}");
                 
-            }
-            else
+        //    }
+        //    else
+        //    {
+        //        Debug.WriteLine("Send Pt not ticked");
+        //    }               
+
+        //}
+
+        private void SendText2Paltalk(string text)
+        {
+            if (!CheckBoxSendTxt.Checked)
             {
                 Debug.WriteLine("Send Pt not ticked");
-            }               
+                return;
+            }
+            if (string.IsNullOrEmpty(text)) return;
 
+            string strOut = $"*** {text} ***";
+            bool bRes = SetForegroundWindow(ghPtMain);
+
+            Debug.WriteLine($"SetForegroundWindow result: {bRes}");
+            Thread.Sleep(500);
+
+            foreach (char c in strOut)
+            {
+                SendMessage(ghPtMain, WM_CHAR, (IntPtr)c, IntPtr.Zero);
+            }
+            SendMessage(ghPtMain, WM_KEYDOWN, (IntPtr)VK_RETURN, IntPtr.Zero);
+            SendMessage(ghPtMain, WM_KEYUP, (IntPtr)VK_RETURN, IntPtr.Zero);
         }
-                
+
     }
 }
