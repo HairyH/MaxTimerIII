@@ -237,7 +237,7 @@ namespace MaxTimerIII
                 SetWindowPos(ghPtMain, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
                 // Update History List Box
-                ListBoxHistory.Items.Add($"Timing: " + sbWindowText);
+                ListBoxHistory.Items.Add($"Timing: " + windowText);  // sbWindowText
             }
             else
             {
@@ -493,6 +493,11 @@ namespace MaxTimerIII
 
         }
 
+        // This is to check if Paltalk room has focus
+        [DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
+        private static extern IntPtr GetForegroundWindow();
+
+        // Sending text to Paltalk room
         private void CopyPaste2Paltalk(string strMessage)
         {
             if (string.IsNullOrEmpty(strMessage)) return;
@@ -502,14 +507,16 @@ namespace MaxTimerIII
                 Clipboard.SetText("*** " + strMessage + " ***");
 
                 bool bRes = SetForegroundWindow(ghPtMain);
-                Thread.Sleep(1000);
+                Thread.Sleep(500); // 0.5 Sec for Pt to get focus
                 Debug.WriteLine($"Send to Pt Set Foreground Ret {bRes}");
-                SendKeys.Send("^v{ENTER}");
+               
+                SendKeys.SendWait("^v");
+                SendKeys.SendWait("{ENTER}");
+                
             }
             else
             {
                 Debug.WriteLine("Send Pt not ticked");
-                //  MessageBox.Show(strMessage);
             }               
 
         }
